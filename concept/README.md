@@ -39,6 +39,17 @@ Four contract shapes cover the presence or absence of business input and output:
 
 The absence of business input or output does not remove the execution context. Supplier and runnable use cases still participate in execution tracking and configured lifecycle behavior. A consumer or runnable use case communicates successful completion or failure even though its contract returns no business result.
 
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'lineColor': '#ffffff', 'edgeLabelBackground': '#000000', 'primaryTextColor': '#ffffff'}}}%%
+flowchart TD
+    caller["<b>Caller</b><br/>HTTP endpoint, command, or scheduled task"] -->|Supplies| invocation["<b>Invocation</b><br/>Execution context and business input when required"]
+    invocation -->|Passed to| execution["<b>Use-case execution API</b><br/>Contract and execution lifecycle"]
+    execution -->|Invokes when business work is needed| implementation["<b>Use-case implementation</b><br/>Rules and dependency coordination"]
+    execution -->|Reports to the caller| outcome["<b>Invocation outcome</b><br/>Business output when applicable,<br/>completion, or failure"]
+
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff
+```
+
 <br>
 
 #### Input Requirements
@@ -92,6 +103,18 @@ An assembler can expose a default assembled use case through [lazy initializatio
 
 Application composition belongs to the separate [Clean Setup](https://github.com/clean-arch-enablers-project/clean-setup/blob/feature/hello-world/concept/README.md) concept. Clean Use Cases depends on [Clean Setup](https://github.com/clean-arch-enablers-project/clean-setup/blob/feature/hello-world/concept/README.md) for the **autofeatures registry**: the selected and configured autofeature components that participate in workflow execution.
 
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'lineColor': '#ffffff', 'edgeLabelBackground': '#000000', 'primaryTextColor': '#ffffff'}}}%%
+flowchart TD
+    assembler["<b>Use-case assembler</b><br/>Selects and supplies concrete dependencies"] -->|Constructs| implementation["<b>Use-case implementation</b><br/>Coordinates the business workflow"]
+    assembler -->|Supplies| adapter["<b>Selected adapter</b><br/>Implements the dependency operation"]
+    implementation -->|Depends on| port["<b>Port contract</b><br/>Declares the required operation"]
+    adapter -.->|Implements| port
+    adapter -->|Uses| dependency["<b>Concrete dependency</b><br/>Database, remote service, or test substitute"]
+
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff
+```
+
 <br>
 
 #### Use-Case Registration
@@ -113,6 +136,24 @@ The use-case execution boundary coordinates the following work:
 3. Execute the business workflow when needed, invoking ports and recording participating operations. Configured during-run retry behavior applies at its declared boundary.
 4. Record the inner flow's success or failure, end time, applicable output, and exception when present.
 5. Coordinate flow-resource completion hooks and configured post-run autofeatures using the recorded outcome.
+
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'lineColor': '#ffffff', 'edgeLabelBackground': '#000000', 'primaryTextColor': '#ffffff'}}}%%
+flowchart TD
+    start["<b>Begin invocation</b><br/>Start the inner-flow execution record"] --> checks["<b>Configured preconditions</b><br/>Input verification and authorization"]
+    checks --> passed{"Preconditions passed?"}
+    passed -->|No| failed["<b>Record failure</b><br/>Outcome, end time, and exception"]
+    passed -->|Yes| cache{"Eligible cached result available?"}
+    cache -->|Yes| success["<b>Record success</b><br/>Outcome, end time, and applicable output"]
+    cache -->|No, or caching not configured| business["<b>Run business workflow</b><br/>Invoke ports and record steps;<br/>apply retries at the configured boundary"]
+    business --> result{"Workflow succeeded?"}
+    result -->|Yes| success
+    result -->|No| failed
+    success --> completion["<b>Completion processing</b><br/>Resource hooks and configured post-run autofeatures"]
+    failed --> completion
+
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff
+```
 
 Port invocations contribute step unit metadata to the inner flow. Internal operations and ordinary method calls can also be recorded as steps without becoming dependency ports. A recovered step failure can coexist with a successful overall workflow outcome.
 
